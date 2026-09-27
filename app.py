@@ -4,14 +4,11 @@ from PIL import Image
 import io
 import os
 
-# Подтягиваем прокси для локального теста через VPN Нидерландов
-os.environ['HTTP_PROXY'] = os.environ.get('HTTP_PROXY', '')
-os.environ['HTTPS_PROXY'] = os.environ.get('HTTPS_PROXY', '')
-
+# Считываем секретный ключ из настроек хостинга Streamlit Cloud
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Настройка интерфейса сайта в браузере (Дорогой темный/светлый адаптивный стиль)
+# Настройка интерфейса сайта в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
 
 # --- ГЛАВНЫЙ БАННЕР И МАРКЕТИНГОВЫЙ ЗАГОЛОВОК ---
@@ -55,7 +52,7 @@ with tab1:
     item_status = st.selectbox(
         "В каком состоянии предмет?",
         [
-            "Новый в упаковке / Остатки в идеале (например, целый мешок клея)", 
+            "Новый в упаковке / Остатки в идеале (например, целый , мешок клея)", 
             "Б/у в отличном состоянии (Почти не пользовались, лежит без дела)", 
             "Б/у в хорошем состоянии (Есть следы использования, но полностью рабочий)", 
             "На запчасти / Под восстановление / Хлам"
@@ -99,7 +96,6 @@ with tab1:
 # --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ ---
 with tab2:
     st.subheader("🤖 Задайте ИИ любой вопрос про продажи и расхламление")
-    st.write("Например: *'Как правильно общаться с покупателями на Авито?'* или *'За сколько можно продать старый сломанный холодильник?'*")
     
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
@@ -120,5 +116,3 @@ with tab2:
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
             st.error(f"Ошибка ИИ: {e}")
-
-.
