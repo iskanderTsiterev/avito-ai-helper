@@ -8,7 +8,7 @@ import os
 os.environ['HTTP_PROXY'] = os.environ.get('HTTP_PROXY', '')
 os.environ['HTTPS_PROXY'] = os.environ.get('HTTPS_PROXY', '')
 
-GEMINI_API_KEY = "AQ.Ab8RN6KcL9Bc2jHvAQsZKbparuhywhm2sUmPEKT5qSMF5J3-rg"
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Настройка интерфейса сайта в браузере (Дорогой темный/светлый адаптивный стиль)
