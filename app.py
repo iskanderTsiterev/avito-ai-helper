@@ -50,7 +50,7 @@ with tab1:
         [
             "Новый в упаковке / Остатки в идеале", 
             "Б/у в отличном состоянии (Почти не пользовались)", 
-            "Б/у в хорошем состоянии (Есть следы использования)", 
+            "Б/у in хорошем состоянии (Есть следы использования)", 
             "На запчасти / Под восстановление / Хлам"
         ]
     )
@@ -79,15 +79,16 @@ with tab1:
             
             try:
                 with st.spinner("🕵️‍♂️ ИИ сканирует фото и проверяет цены конкурентов на Авито..."):
-                    # Оптимизируем размер изображения для моментальной передачи без перегрузок
+                    # Оптимизируем картинку под требования сетевого моста
                     buffered = io.BytesIO()
-                    image.convert("RGB").save(buffered, format="JPEG", quality=60)
+                    image.convert("RGB").save(buffered, format="JPEG", quality=50)
                     img_str = base64.b64encode(buffered.getvalue()).decode()
                     
-                    # Отправляем на выделенный скоростной vision-сервер Llama
+                    # Отправляем запрос через свободный от санкций прокси-шлюз
                     response = requests.post(
-                        "https://pollinations.ai",
+                        "https://chatgpt.org.uk",
                         json={
+                            "model": "gpt-4o-mini",
                             "messages": [
                                 {
                                     "role": "user",
@@ -96,22 +97,23 @@ with tab1:
                                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
                                     ]
                                 }
-                            ],
-                            "model": "llama" # Переключили на скоростную модель со зрением
+                            ]
                         },
-                        timeout=45
+                        timeout=50
                     )
-                    ai_reply = response.text
+                    
+                    res_data = response.json()
+                    ai_reply = res_data['choices'][0]['message']['content']
                     
                 if ai_reply:
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                    st.write(ai_reply)
+                    st.markdown(ai_reply)
                     
                     st.markdown("---")
                     st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
                     st.link_button("💬 Перейти в Telegram-бот", "https://t.me")
                 else:
-                    st.error("ИИ взял паузу, нажмите кнопку еще раз.")
+                    st.error("Сервер обрабатывает изображение. Нажмите кнопку еще раз через 5 секунд.")
                     
             except Exception as e:
                 st.error(f"Не удалось выполнить оценку. Ошибка: {e}")
@@ -132,14 +134,15 @@ with tab2:
         try:
             with st.spinner("ИИ пишет ответ..."):
                 response = requests.post(
-                    "https://pollinations.ai",
+                    "https://chatgpt.org.uk",
                     json={
-                        "messages": [{"role": "user", "content": user_input}],
-                        "model": "openai"
+                        "model": "gpt-4o-mini",
+                        "messages": [{"role": "user", "content": user_input}]
                     },
                     timeout=30
                 )
-                reply = response.text
+                res_data = response.json()
+                reply = res_data['choices'][0]['message']['content']
             with st.chat_message("assistant"):
                 st.write(reply)
             st.session_state.messages.append({"role": "assistant", "content": reply})
