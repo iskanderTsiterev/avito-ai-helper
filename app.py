@@ -44,7 +44,7 @@ with tab1:
     st.subheader("📸 Шаг 1. Загрузите фото предмета, от которого хотите избавиться")
     uploaded_file = st.file_uploader("Выберите изображение (фото остатков ремонта, техники, вещей)...", type=["jpg", "jpeg", "png"])
     
-    st.subheader("⚙️ Шаг 2. Unclutter состояние вещи")
+    st.subheader("⚙️ Шаг 2. Укажите состояние вещи")
     item_status = st.selectbox(
         "В каком состоянии предмет?",
         [
