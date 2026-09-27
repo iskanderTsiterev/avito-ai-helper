@@ -120,3 +120,5 @@ with tab2:
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
             st.error(f"Ошибка ИИ: {e}")
+
+.
