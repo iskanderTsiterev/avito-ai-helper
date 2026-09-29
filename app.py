@@ -96,7 +96,6 @@ with tab1:
                 with st.spinner("🕵️‍♂️ Оригинальная Gemini 2.5 сканирует фото..."):
                     base64_image = encode_image_to_base64(image)
                     
-                    # Отправляем официальный запрос к бесплатной Gemini через мост OpenRouter
                     response = ai_client.chat.completions.create(
                         model="google/gemini-2.5-flash:free",
                         messages=[
@@ -110,7 +109,12 @@ with tab1:
                         ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                st.write(response.choices.message.content)
+                
+                # ИСПРАВЛЕНИЕ: Безопасно получаем текст ответа, если пришла строка или объект
+                if isinstance(response, str):
+                    st.write(response)
+                else:
+                    st.write(response.choices[0].message.content)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
@@ -132,7 +136,6 @@ with tab2:
             st.write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Пересобираем историю сообщений для формата OpenRouter/OpenAI
         formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         try:
@@ -141,7 +144,10 @@ with tab2:
                     model="google/gemini-2.5-flash:free",
                     messages=formatted_messages
                 )
-            answer = response.choices.message.content
+            
+            # ИСПРАВЛЕНИЕ: Безопасно извлекаем текст для чата
+            answer = response if isinstance(response, str) else response.choices[0].message.content
+            
             with st.chat_message("assistant"):
                 st.write(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
