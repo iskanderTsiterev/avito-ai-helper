@@ -15,11 +15,11 @@ ai_client = OpenAI(
 
 # Функция для сильного сжатия картинки, чтобы запросы не блокировались Cloudflare
 def encode_image_to_base64(image):
-    # Если картинка слишком большая, уменьшаем её разрешение
-    image.thumbnail((800, 800)) 
+    # Уменьшаем разрешение для легкого веса
+    image.thumbnail((600, 600)) 
     buffered = io.BytesIO()
-    # Сохраняем с оптимизацией и качеством 70% (для ИИ этого более чем достаточно)
-    image.save(buffered, format="JPEG", optimize=True, quality=70)
+    # Сохраняем с оптимизацией и качеством 65% (для ИИ этого более чем достаточно)
+    image.save(buffered, format="JPEG", optimize=True, quality=65)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 # Настройка внешнего вида страницы в браузере
@@ -32,7 +32,7 @@ st.markdown("""
 У каждого в доме есть вещи, которые лежат без дела: остатки стройматериалов после ремонта, 
 старая техника, надоевший парфюм или одежда. **Пора превратить этот мусор в свободное пространство и рубли на карте!**
 
-Наш искусственный интеллект **Gemini** мгновенно проанализирует рынок вторички РФ, 
+Наш искусственный интеллект мгновенно проанализирует рынок вторички РФ, 
 выдаст точную стоимость вещи и напишет объявление, которое продаст её за 24 часа.
 """)
 
@@ -82,6 +82,7 @@ with tab1:
             Ты — профессиональный ИИ-оценщик вторичного рынка (Авито) и копирайтер.
             Твоя цель — помочь пользователю расхламить дом, избавиться от ненужных вещей и заработать на этом.
             Изучи прикрепленное изображение товара и его состояние: "{item_status}".
+            Отвечай строго на РУССКОМ языке.
             
             Выдай подробный ответ строго по следующим блокам:
             
@@ -96,12 +97,12 @@ with tab1:
             - **Текст объявления:** Напиши честный, но продающий структурированный текст. Укажи параметры, причину продажи ("осталось после ремонта" или "освобождаю место в квартире"), блок доставки и призыв быстрее написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ Оригинальная Gemini сканирует фото..."):
+                with st.spinner("🕵️‍♂️ ИИ сканирует фото товара..."):
                     base64_image = encode_image_to_base64(image)
                     
-                    # Используем супер-стабильную модель 2.0-flash
+                    # ПЕРЕКЛЮЧАЕМ на лояльную к лимитам бесплатную модель Llama 3.2 Vision
                     response = ai_client.chat.completions.create(
-                        model="google/gemini-2.0-flash:free",
+                        model="meta-llama/llama-3.2-11b-vision-instruct:free",
                         messages=[
                             {
                                 "role": "user",
@@ -118,7 +119,7 @@ with tab1:
                     )
                 
                 if isinstance(response, str) and "<!DOCTYPE html>" in response:
-                    st.error("Ошибка сети OpenRouter. Попробуйте еще раз через секунду.")
+                    st.error("Временный сбой сети. Нажмите кнопку оценки еще раз.")
                 else:
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                     answer = response if isinstance(response, str) else response.choices.message.content
@@ -149,7 +150,7 @@ with tab2:
         try:
             with st.spinner("ИИ пишет ответ..."):
                 response = ai_client.chat.completions.create(
-                    model="google/gemini-2.0-flash:free",
+                    model="meta-llama/llama-3.2-11b-vision-instruct:free",
                     messages=formatted_messages,
                     extra_headers={
                         "HTTP-Referer": "https://streamlit.app",
