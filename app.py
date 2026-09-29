@@ -96,6 +96,7 @@ with tab1:
                 with st.spinner("🕵️‍♂️ Оригинальная Gemini 2.5 сканирует фото..."):
                     base64_image = encode_image_to_base64(image)
                     
+                    # ИСПРАВЛЕНИЕ: Добавляем обязательные extra_headers для бесплатных моделей OpenRouter
                     response = ai_client.chat.completions.create(
                         model="google/gemini-2.5-flash:free",
                         messages=[
@@ -106,15 +107,20 @@ with tab1:
                                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                 ]
                             }
-                        ]
+                        ],
+                        extra_headers={
+                            "HTTP-Referer": "https://streamlit.app",
+                            "X-Title": "Avito AI Helper"
+                        }
                     )
-                st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                # ИСПРАВЛЕНИЕ: Безопасно получаем текст ответа, если пришла строка или объект
-                if isinstance(response, str):
-                    st.write(response)
+                # Проверяем, что ответ валидный и не является HTML-строкой ошибки
+                if isinstance(response, str) and "<!DOCTYPE html>" in response:
+                    st.error("Ошибка авторизации на OpenRouter. Проверьте правильность токена в Secrets.")
                 else:
-                    st.write(response.choices[0].message.content)
+                    st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
+                    answer = response if isinstance(response, str) else response.choices.message.content
+                    st.write(answer)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
@@ -142,14 +148,19 @@ with tab2:
             with st.spinner("ИИ пишет ответ..."):
                 response = ai_client.chat.completions.create(
                     model="google/gemini-2.5-flash:free",
-                    messages=formatted_messages
+                    messages=formatted_messages,
+                    extra_headers={
+                        "HTTP-Referer": "https://streamlit.app",
+                        "X-Title": "Avito AI Helper"
+                    }
                 )
             
-            # ИСПРАВЛЕНИЕ: Безопасно извлекаем текст для чата
-            answer = response if isinstance(response, str) else response.choices[0].message.content
-            
-            with st.chat_message("assistant"):
-                st.write(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            if isinstance(response, str) and "<!DOCTYPE html>" in response:
+                st.error("Ошибка авторизации на OpenRouter.")
+            else:
+                answer = response if isinstance(response, str) else response.choices.message.content
+                with st.chat_message("assistant"):
+                    st.write(answer)
+                st.session_state.messages.append({"role": "assistant", "content": answer})
         except Exception as e:
             st.error(f"Ошибка ИИ в чате: {e}")
