@@ -1,24 +1,25 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from PIL import Image
 import io
-import os
+import base64
 
-# Настраиваем клиент Gemini на работу через глобальное зеркало Cloudflare (работает в РФ без VPN)
-# Используем актуальную модель gemini-2.5-flash
-ai_client = genai.Client(
-    http_options={'api_version': 'v1alpha'},
-    client_options={
-        'api_key': 'free',  # Для публичного шлюза используется универсальный или пустой ключ
-        'http_client': None
-    }
+# Подтягиваем ключ OpenRouter из безопасных настроек Secrets
+OPENROUTER_API_KEY = st.secrets["GEMINI_API_KEY"]
+
+# Настраиваем клиент для работы через шлюз OpenRouter
+ai_client = OpenAI(
+    base_url="https://openrouter.ai",
+    api_key=OPENROUTER_API_KEY
 )
 
-# Подменяем базовый URL у клиента на рабочий прокси-шлюз
-ai_client._api_client.base_url = "https://cloudflare.com"
+# Функция для конвертации картинки в текстовый формат Base64
+def encode_image_to_base64(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# Настройка интерфейса сайта в браузере
+# Настройка внешнего вида страницы в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
 
 # --- ГЛАВНЫЙ БАННЕР И МАРКЕТИНГОВЫЙ ЗАГОЛОВОК ---
@@ -38,7 +39,7 @@ st.info("💡 **Как это работает?** 1. Сделай фото ➡�
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 🆓 Бесплатный доступ")
+    st.write("**Статус тарифа:** 🆓 Тестовый доступ через OpenRouter")
     st.markdown("---")
     st.subheader("🤖 Наш Telegram-бот")
     st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
@@ -53,7 +54,7 @@ if "messages" not in st.session_state:
 
 tab1, tab2 = st.tabs(["🖼️ Умное Расхламление & Оценка по фото", "💬 Задать вопрос ИИ (Чат)"])
 
-# --- ВКЛАДКА 1: УМНАЯ ОЦЕНКА ---
+# --- ВКЛАДКА 1: УМНАЯ ОЦЕНКА ПО ФОТО ---
 with tab1:
     st.subheader("📸 Шаг 1. Загрузите фото предмета, от которого хотите избавиться")
     uploaded_file = st.file_uploader("Выберите изображение (фото остатков ремонта, техники, вещей)...", type=["jpg", "jpeg", "png"])
@@ -92,22 +93,32 @@ with tab1:
             - **Текст объявления:** Напиши честный, но продающий структурированный текст. Укажи параметры, причину продажи ("осталось после ремонта" или "освобождаю место в квартире"), блок доставки и призыв быстрее написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ ИИ сканирует фото через прокси-шлюз..."):
-                    # Используем нативный вызов новой библиотеки google-genai
-                    response = ai_client.models.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=[system_instruction, image]
+                with st.spinner("🕵️‍♂️ Оригинальная Gemini 2.5 сканирует фото..."):
+                    base64_image = encode_image_to_base64(image)
+                    
+                    # Отправляем официальный запрос к бесплатной Gemini через мост OpenRouter
+                    response = ai_client.chat.completions.create(
+                        model="google/gemini-2.5-flash:free",
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": system_instruction},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]
+                            }
+                        ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                st.write(response.text)
+                st.write(response.choices.message.content)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
                 st.link_button("💬 Перейти в Telegram-бот", "https://t.me")
             except Exception as e:
-                st.error(f"Не удалось выполнить оценку. Ошибка: {e}")
+                st.error(f"Не удалось выполнить оценку. Ошибка OpenRouter: {e}")
 
-# --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ ---
+# --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ С ИИ ---
 with tab2:
     st.subheader("🤖 Задайте ИИ любой вопрос про продажи и расхламление")
     st.write("Например: *'Как правильно общаться с покупателями на Авито?'* или *'За сколько можно продать старый сломанный холодильник?'*")
@@ -121,13 +132,18 @@ with tab2:
             st.write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        full_prompt = "".join([f"\n{'User' if m['role'] == 'user' else 'Model'}: {m['content']}\n" for m in m in st.session_state.messages]) + "\nModel: "
+        # Пересобираем историю сообщений для формата OpenRouter/OpenAI
+        formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         try:
             with st.spinner("ИИ пишет ответ..."):
-                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=full_prompt)
+                response = ai_client.chat.completions.create(
+                    model="google/gemini-2.5-flash:free",
+                    messages=formatted_messages
+                )
+            answer = response.choices.message.content
             with st.chat_message("assistant"):
-                st.write(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
+                st.write(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
         except Exception as e:
-            st.error(f"Ошибка ИИ: {e}")
+            st.error(f"Ошибка ИИ в чате: {e}")
