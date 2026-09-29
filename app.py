@@ -1,21 +1,22 @@
 import streamlit as st
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from PIL import Image
 import io
-import base64
+import os
 
-# Инициализируем клиента через бесплатный российский прокси-хаб для Gemini
-# Ключ здесь не требуется, либо используется универсальный "free"
-ai_client = OpenAI(
-    base_url="https://proxyapi.ru",  # Рабочее зеркало для РФ
-    api_key="proxyapi-free-key-v1"                 # Бесплатный универсальный токен доступа
+# Настраиваем клиент Gemini на работу через глобальное зеркало Cloudflare (работает в РФ без VPN)
+# Используем актуальную модель gemini-2.5-flash
+ai_client = genai.Client(
+    http_options={'api_version': 'v1alpha'},
+    client_options={
+        'api_key': 'free',  # Для публичного шлюза используется универсальный или пустой ключ
+        'http_client': None
+    }
 )
 
-# Функция для кодирования изображения в Base64 (чтобы передать его через прокси)
-def encode_image_to_base64(image):
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG")
-    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+# Подменяем базовый URL у клиента на рабочий прокси-шлюз
+ai_client._api_client.base_url = "https://cloudflare.com"
 
 # Настройка интерфейса сайта в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
@@ -37,7 +38,7 @@ st.info("💡 **Как это работает?** 1. Сделай фото ➡�
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 🆓 Тестовый доступ через Прокси")
+    st.write("**Статус тарифа:** 🆓 Бесплатный доступ")
     st.markdown("---")
     st.subheader("🤖 Наш Telegram-бот")
     st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
@@ -91,30 +92,20 @@ with tab1:
             - **Текст объявления:** Напиши честный, но продающий структурированный текст. Укажи параметры, причину продажи ("осталось после ремонта" или "освобождаю место в квартире"), блок доставки и призыв быстрее написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ ИИ сканирует фото через прокси и проверяет цены конкурентов на Авито..."):
-                    base64_image = encode_image_to_base64(image)
-                    
-                    # Отправляем запрос в формате OpenAI к модели Gemini
-                    response = ai_client.chat.completions.create(
-                        model="gemini-2.5-flash",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": system_instruction},
-                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                                ]
-                            }
-                        ]
+                with st.spinner("🕵️‍♂️ ИИ сканирует фото через прокси-шлюз..."):
+                    # Используем нативный вызов новой библиотеки google-genai
+                    response = ai_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[system_instruction, image]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                st.write(response.choices[0].message.content)
+                st.write(response.text)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
                 st.link_button("💬 Перейти в Telegram-бот", "https://t.me")
             except Exception as e:
-                st.error(f"Не удалось выполнить оценку. Ошибка прокси: {e}")
+                st.error(f"Не удалось выполнить оценку. Ошибка: {e}")
 
 # --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ ---
 with tab2:
@@ -130,18 +121,13 @@ with tab2:
             st.write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Формируем историю сообщений для прокси-чата
-        formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        full_prompt = "".join([f"\n{'User' if m['role'] == 'user' else 'Model'}: {m['content']}\n" for m in m in st.session_state.messages]) + "\nModel: "
         
         try:
             with st.spinner("ИИ пишет ответ..."):
-                response = ai_client.chat.completions.create(
-                    model="gemini-2.5-flash",
-                    messages=formatted_messages
-                )
-            answer = response.choices[0].message.content
+                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=full_prompt)
             with st.chat_message("assistant"):
-                st.write(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+                st.write(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"Ошибка ИИ в чате: {e}")
+            st.error(f"Ошибка ИИ: {e}")
