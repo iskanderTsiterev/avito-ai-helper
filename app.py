@@ -4,8 +4,8 @@ from PIL import Image
 import io
 import base64
 
-# Подтягиваем ключ OpenRouter из безопасных настроек Secrets
-OPENROUTER_API_KEY = st.secrets["GEMINI_API_KEY"]
+# Жестко прописываем рабочий ключ OpenRouter прямо в код для обхода багов кэша
+OPENROUTER_API_KEY = "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"
 
 # Настраиваем клиент для работы через шлюз OpenRouter
 ai_client = OpenAI(
@@ -96,7 +96,6 @@ with tab1:
                 with st.spinner("🕵️‍♂️ Оригинальная Gemini 2.5 сканирует фото..."):
                     base64_image = encode_image_to_base64(image)
                     
-                    # ИСПРАВЛЕНИЕ: Добавляем обязательные extra_headers для бесплатных моделей OpenRouter
                     response = ai_client.chat.completions.create(
                         model="google/gemini-2.5-flash:free",
                         messages=[
@@ -114,9 +113,8 @@ with tab1:
                         }
                     )
                 
-                # Проверяем, что ответ валидный и не является HTML-строкой ошибки
                 if isinstance(response, str) and "<!DOCTYPE html>" in response:
-                    st.error("Ошибка авторизации на OpenRouter. Проверьте правильность токена в Secrets.")
+                    st.error("Ошибка сети OpenRouter. Пожалуйста, сделайте Стоп/Старт приложения в меню Manage app.")
                 else:
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                     answer = response if isinstance(response, str) else response.choices.message.content
@@ -156,7 +154,7 @@ with tab2:
                 )
             
             if isinstance(response, str) and "<!DOCTYPE html>" in response:
-                st.error("Ошибка авторизации на OpenRouter.")
+                st.error("Ошибка сети OpenRouter.")
             else:
                 answer = response if isinstance(response, str) else response.choices.message.content
                 with st.chat_message("assistant"):
