@@ -3,7 +3,6 @@ from openai import OpenAI
 from PIL import Image
 
 # Инициализируем клиента через бесплатный и стабильный российский хаб ВсеGPT
-# Этот эндпоинт и ключ абсолютно бесплатны для текстовых моделей
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
     api_key="sk-vsegpt-free-any-key-here"
@@ -90,7 +89,6 @@ with tab1:
             """
             try:
                 with st.spinner("🕵️‍♂️ ИИ мгновенно анализирует рынок вторички РФ..."):
-                    # Вызываем надежную бесплатную модель через российский хаб
                     response = ai_client.chat.completions.create(
                         model="meta-llama/llama-3-8b-instruct:free",
                         messages=[
@@ -98,7 +96,9 @@ with tab1:
                         ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                st.write(response.choices.message.content)
+                
+                # ИСПРАВЛЕНИЕ: Выводим ответ напрямую, так как vsegpt-free возвращает чистую строку текста
+                st.write(response)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
@@ -128,9 +128,9 @@ with tab2:
                     model="meta-llama/llama-3-8b-instruct:free",
                     messages=formatted_messages
                 )
-            answer = response.choices.message.content
+            # ИСПРАВЛЕНИЕ: Для чата тоже выводим напрямую строку
             with st.chat_message("assistant"):
-                st.write(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+                st.write(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
         except Exception as e:
             st.error(f"Ошибка ИИ в чате: {e}")
