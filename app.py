@@ -1,12 +1,9 @@
 import streamlit as st
-from openai import OpenAI
+import requests
 from PIL import Image
 
-# Вставляем ключ напрямую в код для проверки работоспособности
-ai_client = OpenAI(
-    base_url="https://vsegpt.ru",
-    api_key="sk-or-vis-3f438e-c4bd6a619441d28293437943779b8ed57b7488e2d6dc2e3f376691b546ed2ef2"
-)
+# Вставляем ваш проверенный ключ напрямую в код для 100% надежности
+VSEGPT_KEY = "sk-or-vis-3f438e-c4bd6a619441d28293437943779b8ed57b7488e2d6dc2e3f376691b546ed2ef2"
 
 # Настройка интерфейса сайта в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
@@ -28,10 +25,6 @@ with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
     st.write("**Статус тарифа:** 🆓 Тестовый баланс ВсеGPT")
-    st.markdown("---")
-    st.subheader("🤖 Наш Telegram-бот")
-    st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
-    st.link_button("🚀 Открыть бота в Telegram", "https://t.me")
     st.markdown("---")
     if st.button("🧹 Очистить историю"):
         st.session_state.messages = []
@@ -66,59 +59,46 @@ with tab1:
     
     if st.button("💰 Запустить оценку рынка и расхламление"):
         if not item_title:
-            st.warning("⚠️ Пожалуйста, введите название предмета в поле выше, чтобы ИИ смог найти его на рынке!")
+            st.warning("⚠️ Пожалуйста, введите название предмета в поле выше!")
         else:
             system_instruction = f"""
             Ты — профессиональный ИИ-оценщик вторичного рынка (Авито) и копирайтер.
-            Твоя цель — помочь пользователю Искандеру расхламить дом, избавиться от ненужной вещи и заработать на этом.
-            
-            Предмет для анализа: "{item_title}"
-            Состояние предмета: "{item_status}"
+            Ты должен помочь пользователю Искандеру оценить предмет: "{item_title}", состояние: "{item_status}".
             
             Выдай подробный ответ строго на русском языке по следующим блокам:
-            
-            📊 БЛОК 1: АНАЛИЗ СТОИМОСТИ (СКОЛЬКО ДЕНЕГ ВЫ ПОЛУЧИТЕ)
-            - **Что оцениваем:** Подробное описание модели, бренда и характеристик на основе введенного текста.
-            - **Рыночная цена прямо сейчас:** Средняя стоимость аналогичных б/у предложений на Авито/Юле в РФ.
-            - **РЕКОМЕНДУЕМАЯ ВИЛКА ЦЕН:** Назови минимальную цену (чтобы забрали сегодня) и максимальную цену (если готовы подождать неделю).
-            - **Вердикт оценщика:** Почему стоит продать это прямо сейчас.
-            
-            📝 БЛОК 2: ГОТОВОЕ ОБЪЯВЛЕНИЕ ДЛЯ БЫСТРОЙ ПРОДАЖИ
-            - **Заголовок:** Придумай цепляющий, оптимизированный под поиск заголовок на Авито.
-            - **Текст объявления:** Напиши структурированный, честный и продающий текст. Укажи параметры, причину продажи ("освобождаю место"), блок доставки и призыв написать в личку.
+            📊 БЛОК 1: АНАЛИЗ СТОИМОСТИ (Средняя б/у цена на Авито в РФ и вилка цен от минимальной до максимальной).
+            📝 БЛОК 2: ГОТОВОЕ ОБЪЯВЛЕНИЕ ДЛЯ БЫСТРОЙ ПРОДАЖИ (Цепляющий заголовок и структурированный продающий текст).
             """
+            
+            url = "https://vsegpt.ru"
+            headers = {
+                "Authorization": f"Bearer {VSEGPT_KEY.strip()}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": "openai/gpt-4o-mini",
+                "messages": [{"role": "user", "content": system_instruction}]
+            }
+            
             try:
                 with st.spinner("🕵️‍♂️ ИИ анализирует рынок вторички РФ..."):
-                    response = ai_client.chat.completions.create(
-                        model="openai/gpt-4o-mini",
-                        messages=[
-                            {"role": "user", "content": system_instruction}
-                        ]
-                    )
+                    response = requests.post(url, json=data, headers=headers)
+                    result_json = response.json()
                 
-                if isinstance(response, str):
-                    ai_text = response
-                elif hasattr(response, 'choices') and len(response.choices) > 0:
-                    ai_text = response.choices.message.content
-                else:
-                    ai_text = str(response)
-                
-                if "<!DOCTYPE html>" in ai_text or "<html" in ai_text:
-                    st.error("⚠️ Сервер вернул ошибку. Проверьте правильность написания ключа внутри кода!")
-                else:
+                if response.status_code == 200 and "choices" in result_json:
+                    ai_text = result_json["choices"][0]["message"]["content"]
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                     st.markdown(ai_text)
-                
-                st.markdown("---")
-                st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
-                st.link_button("💬 Перейти в Telegram-бот", "https://t.me")
+                else:
+                    error_msg = result_json.get("error", {}).get("message", str(result_json))
+                    st.error(f"Ошибка авторизации ВсеGPT: {error_msg}")
+                    
             except Exception as e:
-                st.error(f"Не удалось выполнить оценку. Ошибка сервера: {e}")
+                st.error(f"Не удалось выполнить веб-запрос: {e}")
 
 # --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ С ИИ ---
 with tab2:
     st.subheader("🤖 Задайте ИИ любой вопрос про продажи и расхламление")
-    st.write("Например: *'Как правильно общаться с покупателями на Авито?'* или *'За сколько можно продать старый сломанный холодильник?'*")
     
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
@@ -129,27 +109,23 @@ with tab2:
             st.write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
+        url = "https://vsegpt.ru"
+        headers = {"Authorization": f"Bearer {VSEGPT_KEY.strip()}", "Content-Type": "application/json"}
+        
         formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        data = {"model": "openai/gpt-4o-mini", "messages": formatted_messages}
         
         try:
             with st.spinner("ИИ пишет ответ..."):
-                response = ai_client.chat.completions.create(
-                    model="openai/gpt-4o-mini",
-                    messages=formatted_messages
-                )
-            
-            if isinstance(response, str):
-                ai_response_text = response
-            elif hasattr(response, 'choices') and len(response.choices) > 0:
-                ai_response_text = response.choices.message.content
-            else:
-                ai_response_text = str(response)
-            
-            if "<!DOCTYPE html>" in ai_response_text or "<html" in ai_response_text:
-                st.error("⚠️ Ошибка авторизации ключа.")
-            else:
+                response = requests.post(url, json=data, headers=headers)
+                result_json = response.json()
+                
+            if response.status_code == 200 and "choices" in result_json:
+                ai_response_text = result_json["choices"][0]["message"]["content"]
                 with st.chat_message("assistant"):
                     st.write(ai_response_text)
                 st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
+            else:
+                st.error("Ошибка ИИ в чате. Проверьте ключ.")
         except Exception as e:
-            st.error(f"Ошибка ИИ в чате: {e}")
+            st.error(f"Ошибка сети в чате: {e}")
