@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Очищаем API-ключ от скрытых пробелов и символов переноса строки (.strip())
+# Вставляем ключ напрямую в код для проверки работоспособности
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
-    api_key=st.secrets["VSEGPT_API_KEY"].strip()
+    api_key="sk-or-vis-3f438e-c4bd6a619441d28293437943779b8ed57b7488e2d6dc2e3f376691b546ed2ef2"
 )
 
 # Настройка интерфейса сайта в браузере
@@ -96,7 +96,6 @@ with tab1:
                         ]
                     )
                 
-                # Разбор ответа
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
@@ -105,7 +104,7 @@ with tab1:
                     ai_text = str(response)
                 
                 if "<!DOCTYPE html>" in ai_text or "<html" in ai_text:
-                    st.error("⚠️ Сервер вернул ошибку авторизации. Проверьте ваш API-ключ в Secrets!")
+                    st.error("⚠️ Сервер вернул ошибку. Проверьте правильность написания ключа внутри кода!")
                 else:
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                     st.markdown(ai_text)
@@ -147,7 +146,7 @@ with tab2:
                 ai_response_text = str(response)
             
             if "<!DOCTYPE html>" in ai_response_text or "<html" in ai_response_text:
-                st.error("⚠️ Ошибка авторизации ключа в чате. Пожалуйста, перепроверьте VSEGPT_API_KEY.")
+                st.error("⚠️ Ошибка авторизации ключа.")
             else:
                 with st.chat_message("assistant"):
                     st.write(ai_response_text)
