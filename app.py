@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Инициализируем клиента ВсеGPT через стабильный порт 6070
+# ИСПРАВЛЕНО: Указан точный URL из документации без сторонних портов
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
     api_key=st.secrets["VSEGPT_API_KEY"]
@@ -96,14 +96,11 @@ with tab1:
                         ]
                     )
                 
-                # ВСЕЯДНЫЙ РАЗБОР ОТВЕТА (Защита от списков, строк и объектов)
-                ai_text = ""
+                # Разбор ответа
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
-                    ai_text = response.choices[0].message.content if isinstance(response.choices, list) else response.choices.message.content
-                elif isinstance(response, list) and len(response) > 0:
-                    ai_text = response[0].get('message', {}).get('content', str(response))
+                    ai_text = response.choices[0].message.content
                 else:
                     ai_text = str(response)
                 
@@ -142,13 +139,10 @@ with tab2:
                     messages=formatted_messages
                 )
             
-            # ВСЕЯДНЫЙ РАЗБОР ОТВЕТА ДЛЯ ЧАТА
             if isinstance(response, str):
                 ai_response_text = response
             elif hasattr(response, 'choices') and len(response.choices) > 0:
-                ai_response_text = response.choices[0].message.content if isinstance(response.choices, list) else response.choices.message.content
-            elif isinstance(response, list) and len(response) > 0:
-                ai_response_text = response[0].get('message', {}).get('content', str(response))
+                ai_response_text = response.choices[0].message.content
             else:
                 ai_response_text = str(response)
             
