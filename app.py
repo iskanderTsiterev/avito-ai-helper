@@ -75,7 +75,7 @@ with tab1:
             Предмет для анализа: "{item_title}"
             Состояние предмета: "{item_status}"
             
-            Выдай подробный ответ строго на русском языке по следующим блокам:
+            Выдай подробный ответ строго на русском языке по следующим blocks:
             
             📊 БЛОК 1: АНАЛИЗ СТОИМОСТИ (СКОЛЬКО ДЕНЕГ ВЫ ПОЛУЧИТЕ)
             - **Что оцениваем:** Подробное описание модели, бренда и характеристик на основе введенного текста.
@@ -89,7 +89,6 @@ with tab1:
             """
             try:
                 with st.spinner("🕵️‍♂️ ИИ анализирует рынок вторички РФ..."):
-                    # Используем быструю, качественную и стабильную модель gpt-4o-mini
                     response = ai_client.chat.completions.create(
                         model="openai/gpt-4o-mini",
                         messages=[
@@ -98,7 +97,15 @@ with tab1:
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                st.markdown(response.choices.message.content)
+                # УМНАЯ ПРОВЕРКА ТИПА ДАННЫХ
+                if isinstance(response, str):
+                    ai_text = response
+                elif hasattr(response, 'choices') and len(response.choices) > 0:
+                    ai_text = response.choices[0].message.content
+                else:
+                    ai_text = str(response)
+                    
+                st.markdown(ai_text)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
@@ -129,8 +136,16 @@ with tab2:
                     messages=formatted_messages
                 )
             
+            # УМНАЯ ПРОВЕРКА ТИПА ДАННЫХ ДЛЯ ЧАТА
+            if isinstance(response, str):
+                ai_response_text = response
+            elif hasattr(response, 'choices') and len(response.choices) > 0:
+                ai_response_text = response.choices[0].message.content
+            else:
+                ai_response_text = str(response)
+            
             with st.chat_message("assistant"):
-                st.write(response.choices.message.content)
-            st.session_state.messages.append({"role": "assistant", "content": response.choices.message.content})
+                st.write(ai_response_text)
+            st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
         except Exception as e:
             st.error(f"Ошибка ИИ в чате: {e}")
