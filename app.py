@@ -2,9 +2,9 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# ИСПРАВЛЕНО: Указан точный и корректный базовый URL для шлюза ВсеGPT
+# Инициализируем клиента ВсеGPT с использованием альтернативного стабильного порта 6070
 ai_client = OpenAI(
-    base_url="https://vsegpt.ru",
+    base_url="https://api.vsegpt.ru:6070/v1",
     api_key=st.secrets["VSEGPT_API_KEY"]
 )
 
@@ -15,7 +15,7 @@ st.set_page_config(page_title="Авито Расхламление с ИИ", pag
 st.title("✨ Преврати ненужный хлам в чистые деньги!")
 st.subheader("Освободи место в доме и заработай на этом с помощью ИИ")
 st.markdown("""
-У каждого в доме есть вещи, которые лежат без дела. **Пора превратить этот мусор в свободное空間 и рубли на карте!**
+У каждого в доме есть вещи, которые лежат без дела. **Пора превратить этот мусор в свободное пространство и рубли на карте!**
 
 Наш искусственный интеллект мгновенно проанализирует рынок вторички РФ, 
 выдаст точную стоимость вещи и напишет объявление, которое продаст её за 24 часа.
@@ -95,17 +95,21 @@ with tab1:
                             {"role": "user", "content": system_instruction}
                         ]
                     )
-                st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                # Защита от разных типов ответа сервера
+                # Умная проверка типа ответа (текст или объект)
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
                     ai_text = response.choices.message.content
                 else:
                     ai_text = str(response)
-                    
-                st.markdown(ai_text)
+                
+                # Если сервер всё равно прислал HTML код ошибки, предупреждаем пользователя
+                if "<!DOCTYPE html>" in ai_text or "<html" in ai_text:
+                    st.error("⚠️ Сервер вернул ошибку авторизации. Проверьте, пожалуйста, правильно ли скопирован API-ключ в настройках Secrets вашего Streamlit Share!")
+                else:
+                    st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
+                    st.markdown(ai_text)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
@@ -143,8 +147,11 @@ with tab2:
             else:
                 ai_response_text = str(response)
             
-            with st.chat_message("assistant"):
-                st.write(ai_response_text)
-            st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
+            if "<!DOCTYPE html>" in ai_response_text or "<html" in ai_response_text:
+                st.error("⚠️ Ошибка авторизации ключа в чате. Пожалуйста, перепроверьте VSEGPT_API_KEY в Secrets.")
+            else:
+                with st.chat_message("assistant"):
+                    st.write(ai_response_text)
+                st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
         except Exception as e:
             st.error(f"Ошибка ИИ в чате: {e}")
