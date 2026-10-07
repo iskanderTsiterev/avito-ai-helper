@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Безопасно инициализируем клиента, считывая ключ из настроек Secrets нашего Streamlit
+# Безопасно инициализируем клиента через ВсеGPT
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
     api_key=st.secrets["VSEGPT_API_KEY"]
@@ -88,20 +88,20 @@ with tab1:
             - **Текст объявления:** Напиши структурированный, честный и продающий текст. Укажи параметры, причину продажи ("освобождаю место"), блок доставки и призыв написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ Gemini мгновенно анализирует рынок вторички РФ..."):
+                with st.spinner("🕵️‍♂️ ИИ мгновенно анализирует рынок вторички РФ..."):
                     response = ai_client.chat.completions.create(
-                        model="google/gemini-2.5-flash",
+                        model="meta-llama/llama-3.1-8b-instruct:free",
                         messages=[
                             {"role": "user", "content": system_instruction}
                         ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                # УМНАЯ ПРОВЕРКА: Если ИИ вернул просто строку, берем её. Если объект — вытаскиваем текст.
+                # Извлекаем текст
                 if isinstance(response, str):
                     ai_text = response
                 else:
-                    ai_text = response.choices[0].message.content
+                    ai_text = response.choices.message.content
                     
                 st.markdown(ai_text)
                 
@@ -128,17 +128,16 @@ with tab2:
         formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         try:
-            with st.spinner("Gemini пишет ответ..."):
+            with st.spinner("ИИ пишет ответ..."):
                 response = ai_client.chat.completions.create(
-                    model="google/gemini-2.5-flash",
+                    model="meta-llama/llama-3.1-8b-instruct:free",
                     messages=formatted_messages
                 )
             
-            # УМНАЯ ПРОВЕРКА для чата
             if isinstance(response, str):
                 ai_response_text = response
             else:
-                ai_response_text = response.choices[0].message.content
+                ai_response_text = response.choices.message.content
             
             with st.chat_message("assistant"):
                 st.write(ai_response_text)
