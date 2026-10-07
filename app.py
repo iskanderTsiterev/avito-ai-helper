@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# ИСПРАВЛЕНО: Указан точный URL из документации без сторонних портов
+# Очищаем API-ключ от скрытых пробелов и символов переноса строки (.strip())
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
-    api_key=st.secrets["VSEGPT_API_KEY"]
+    api_key=st.secrets["VSEGPT_API_KEY"].strip()
 )
 
 # Настройка интерфейса сайта в браузере
@@ -100,7 +100,7 @@ with tab1:
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
-                    ai_text = response.choices[0].message.content
+                    ai_text = response.choices.message.content
                 else:
                     ai_text = str(response)
                 
@@ -142,7 +142,7 @@ with tab2:
             if isinstance(response, str):
                 ai_response_text = response
             elif hasattr(response, 'choices') and len(response.choices) > 0:
-                ai_response_text = response.choices[0].message.content
+                ai_response_text = response.choices.message.content
             else:
                 ai_response_text = str(response)
             
