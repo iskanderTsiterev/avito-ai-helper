@@ -45,12 +45,12 @@ with tab1:
         image = Image.open(uploaded_file)
         st.image(image, caption='Товар подготовлен к визуальному анализу', use_container_width=True)
         
-        # МАГИЯ СЖАТИЯ: Уменьшаем картинку до 800 пикселей, чтобы Cloudflare не блокировал тяжелый запрос
+        # МАГИЯ СЖАТИЯ: Уменьшаем картинку до 800 пикселей
         image.thumbnail((800, 800))
         
         # Конвертируем сжатую картинку в формат Base64
         buffered = io.BytesIO()
-        image.save(buffered, format="JPEG", quality=80) # Оптимизируем качество
+        image.save(buffered, format="JPEG", quality=80)
         image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
     st.subheader("📝 Шаг 2. Дополнительное описание (Необязательно)")
@@ -71,7 +71,7 @@ with tab1:
             
             ВНИМАТЕЛЬНО ИЗУЧИ ИЗОБРАЖЕНИЕ:
             1. Определи, ЧТО ИМЕННО находится на фотографии (бренд, модель, цвет, материал, количество, сфера применения).
-            2. Оцени внешний вид товара, его сохранность, упаковку и видимые дефекты. На фото может быть плитка, парфюм, техника или одежда — определи это исключительно глазами!
+            2. Оцени внешний вид товара, его сохранность, упаковку и видимые дефекты. Определи это исключительно глазами по картинке!
             
             Выдай подробный ответ строго на русском языке в следующем формате:
             
@@ -88,7 +88,6 @@ with tab1:
             
             try:
                 with st.spinner("👁️ Зрячий ИИ ВсеGPT детально изучает ваше фото..."):
-                    # Отправляем сжатую картинку через официальный Vision-формат OpenAI-клиента
                     response = ai_client.chat.completions.create(
                         model="google/gemini-2.5-flash",
                         messages=[
@@ -107,8 +106,16 @@ with tab1:
                         ]
                     )
                 
+                # ИСПРАВЛЕНО: Всеядная расшифровка ответа (обрабатывает и строку, и объект Choices)
+                if isinstance(response, str):
+                    ai_text = response
+                elif hasattr(response, 'choices') and len(response.choices) > 0:
+                    ai_text = response.choices.message.content
+                else:
+                    ai_text = str(response)
+
                 st.success("🤖 Визуальный анализ фотографии успешно завершен!")
-                st.markdown(response.choices.message.content)
+                st.markdown(ai_text)
                 
             except Exception as e:
                 st.error(f"Не удалось выполнить оценку. Ошибка сервера: {e}")
@@ -126,7 +133,15 @@ with tab2:
                     model="openai/gpt-4o-mini",
                     messages=[{"role": "user", "content": user_input}]
                 )
+            
+            if isinstance(response, str):
+                chat_text = response
+            elif hasattr(response, 'choices') and len(response.choices) > 0:
+                chat_text = response.choices.message.content
+            else:
+                chat_text = str(response)
+
             with st.chat_message("assistant"):
-                st.markdown(response.choices.message.content)
+                st.markdown(chat_text)
         except Exception as e:
             st.error(f"Ошибка чата: {e}")
