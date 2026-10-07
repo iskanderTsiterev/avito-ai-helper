@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# ИСПРАВЛЕНО: Меняем эндпоинт на основной официальный /api/v1
+# Безопасно инициализируем клиента ВсеGPT через официальный рабочий адрес v1
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
     api_key=st.secrets["VSEGPT_API_KEY"]
@@ -27,7 +27,7 @@ st.info("💡 **Как это работает?** 1. Сделай фото ➡�
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 🆓 Баланс ВсеGPT")
+    st.write("**Статус тарифа:** 🆓 Тестовый баланс ВсеGPT")
     st.markdown("---")
     st.subheader("🤖 Наш Telegram-бот")
     st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
@@ -97,6 +97,7 @@ with tab1:
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
+                # Умная проверка типа ответа (текст или объект)
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
