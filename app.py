@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Инициализируем клиента через бесплатный и стабильный российский хаб ВсеGPT
+# Безопасно инициализируем клиента, считывая ключ из настроек Secrets нашего Streamlit
 ai_client = OpenAI(
-    base_url="https://vsegpt.ru",  # ИСПРАВЛЕНО: Указан корректный эндпоинт для API
-    api_key="sk-vsegpt-free-any-key-here"
+    base_url="https://vsegpt.ru",
+    api_key=st.secrets["VSEGPT_API_KEY"]
 )
 
 # Настройка интерфейса сайта в браузере
@@ -88,17 +88,17 @@ with tab1:
             - **Текст объявления:** Напиши структурированный, честный и продающий текст. Укажи параметры, причину продажи ("освобождаю место"), блок доставки и призыв написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ ИИ мгновенно анализирует рынок вторички РФ..."):
+                with st.spinner("🕵️‍♂️ Gemini мгновенно анализирует рынок вторички РФ..."):
+                    # Подключаем модель google/gemini-2.5-flash через ВсеGPT
                     response = ai_client.chat.completions.create(
-                        model="meta-llama/llama-3-8b-instruct:free",
+                        model="google/gemini-2.5-flash",
                         messages=[
                             {"role": "user", "content": system_instruction}
                         ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                # ИСПРАВЛЕНО: Извлекаем чистый текст из объекта ChatCompletion
-                ai_text = response.choices[0].message.content
+                ai_text = response.choices.message.content
                 st.markdown(ai_text)
                 
                 st.markdown("---")
@@ -124,13 +124,13 @@ with tab2:
         formatted_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         try:
-            with st.spinner("ИИ пишет ответ..."):
+            with st.spinner("Gemini пишет ответ..."):
+                # Для чата также используем Gemini
                 response = ai_client.chat.completions.create(
-                    model="meta-llama/llama-3-8b-instruct:free",
+                    model="google/gemini-2.5-flash",
                     messages=formatted_messages
                 )
-            # ИСПРАВЛЕНО: Извлекаем текст ответа для чата
-            ai_response_text = response.choices[0].message.content
+            ai_response_text = response.choices.message.content
             
             with st.chat_message("assistant"):
                 st.write(ai_response_text)
