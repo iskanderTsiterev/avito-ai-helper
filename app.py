@@ -89,7 +89,6 @@ with tab1:
             """
             try:
                 with st.spinner("🕵️‍♂️ Gemini мгновенно анализирует рынок вторички РФ..."):
-                    # Подключаем модель google/gemini-2.5-flash через ВсеGPT
                     response = ai_client.chat.completions.create(
                         model="google/gemini-2.5-flash",
                         messages=[
@@ -98,7 +97,12 @@ with tab1:
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                ai_text = response.choices.message.content
+                # УМНАЯ ПРОВЕРКА: Если ИИ вернул просто строку, берем её. Если объект — вытаскиваем текст.
+                if isinstance(response, str):
+                    ai_text = response
+                else:
+                    ai_text = response.choices[0].message.content
+                    
                 st.markdown(ai_text)
                 
                 st.markdown("---")
@@ -125,12 +129,16 @@ with tab2:
         
         try:
             with st.spinner("Gemini пишет ответ..."):
-                # Для чата также используем Gemini
                 response = ai_client.chat.completions.create(
                     model="google/gemini-2.5-flash",
                     messages=formatted_messages
                 )
-            ai_response_text = response.choices.message.content
+            
+            # УМНАЯ ПРОВЕРКА для чата
+            if isinstance(response, str):
+                ai_response_text = response
+            else:
+                ai_response_text = response.choices[0].message.content
             
             with st.chat_message("assistant"):
                 st.write(ai_response_text)
