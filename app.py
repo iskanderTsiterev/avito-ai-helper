@@ -2,9 +2,9 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Инициализируем клиента ВсеGPT с использованием альтернативного стабильного порта 6070
+# Инициализируем клиента ВсеGPT через стабильный порт 6070
 ai_client = OpenAI(
-    base_url="https://api.vsegpt.ru:6070/v1",
+    base_url="https://vsegpt.ru",
     api_key=st.secrets["VSEGPT_API_KEY"]
 )
 
@@ -96,17 +96,19 @@ with tab1:
                         ]
                     )
                 
-                # Умная проверка типа ответа (текст или объект)
+                # ВСЕЯДНЫЙ РАЗБОР ОТВЕТА (Защита от списков, строк и объектов)
+                ai_text = ""
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
-                    ai_text = response.choices.message.content
+                    ai_text = response.choices[0].message.content if isinstance(response.choices, list) else response.choices.message.content
+                elif isinstance(response, list) and len(response) > 0:
+                    ai_text = response[0].get('message', {}).get('content', str(response))
                 else:
                     ai_text = str(response)
                 
-                # Если сервер всё равно прислал HTML код ошибки, предупреждаем пользователя
                 if "<!DOCTYPE html>" in ai_text or "<html" in ai_text:
-                    st.error("⚠️ Сервер вернул ошибку авторизации. Проверьте, пожалуйста, правильно ли скопирован API-ключ в настройках Secrets вашего Streamlit Share!")
+                    st.error("⚠️ Сервер вернул ошибку авторизации. Проверьте ваш API-ключ в Secrets!")
                 else:
                     st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                     st.markdown(ai_text)
@@ -140,15 +142,18 @@ with tab2:
                     messages=formatted_messages
                 )
             
+            # ВСЕЯДНЫЙ РАЗБОР ОТВЕТА ДЛЯ ЧАТА
             if isinstance(response, str):
                 ai_response_text = response
             elif hasattr(response, 'choices') and len(response.choices) > 0:
-                ai_response_text = response.choices.message.content
+                ai_response_text = response.choices[0].message.content if isinstance(response.choices, list) else response.choices.message.content
+            elif isinstance(response, list) and len(response) > 0:
+                ai_response_text = response[0].get('message', {}).get('content', str(response))
             else:
                 ai_response_text = str(response)
             
             if "<!DOCTYPE html>" in ai_response_text or "<html" in ai_response_text:
-                st.error("⚠️ Ошибка авторизации ключа в чате. Пожалуйста, перепроверьте VSEGPT_API_KEY в Secrets.")
+                st.error("⚠️ Ошибка авторизации ключа в чате. Пожалуйста, перепроверьте VSEGPT_API_KEY.")
             else:
                 with st.chat_message("assistant"):
                     st.write(ai_response_text)
