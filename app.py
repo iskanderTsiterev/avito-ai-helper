@@ -1,11 +1,20 @@
 import streamlit as st
-from huggingface_hub import InferenceClient
+from openai import OpenAI
 from PIL import Image
 import io
 import base64
 
-# Инициализируем бесплатного автономного клиента без ключей
-client = InferenceClient()
+# Автоматически берем ключ из Secrets, если в коде пусто
+try:
+    API_KEY = st.secrets["VSEGPT_API_KEY"].strip()
+except:
+    API_KEY = "ВСТАВЬТЕ_СЮДА_ВАШ_КЛЮЧ_ЕСЛИ_SECRETS_НЕ_РАБОТАЕТ"
+
+# Инициализируем клиента ВсеGPT через официальный адрес v1
+ai_client = OpenAI(
+    base_url="https://vsegpt.ru",
+    api_key=API_KEY
+)
 
 # Настройка интерфейса сайта в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
@@ -24,7 +33,7 @@ st.markdown("""
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 👁️ Прямое ИИ-Зрение (Безлимит)")
+    st.write("**Статус тарифа:** 👁️ Llama 3.2 Vision (Безлимит)")
     st.markdown("---")
     if st.button("🧹 Очистить историю"):
         st.session_state.messages = []
@@ -42,8 +51,8 @@ with tab1:
         image = Image.open(uploaded_file)
         st.image(image, caption='Товар подготовлен к визуальному анализу', use_container_width=True)
         
-        # Сжимаем фото для быстрой отправки
-        image.thumbnail((600, 600))
+        # Сжимаем фото для гарантированного прохода через Cloudflare
+        image.thumbnail((800, 800))
         buffered = io.BytesIO()
         image.save(buffered, format="JPEG", quality=80)
         image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
@@ -57,32 +66,35 @@ with tab1:
         if uploaded_file is None:
             st.warning("⚠️ Пожалуйста, загрузите фотографию! Наш ИИ проводит оценку 100% на основе изображения.")
         else:
-            user_text_hint = f"\nПодсказка пользователя: {item_title}, {item_status}." if item_title else ""
+            user_text_hint = f"\nТекстовая подсказка от пользователя (модель/состояние): {item_title}, {item_status}." if item_title else ""
             
             system_instruction = f"""
-            Ты — эксперт вторичного рынка Авито со зритетельным анализом. 
-            Перед тобой реальное фото предмета. {user_text_hint}
+            Ты — эксперт вторичного рынка Авито со встроенным компьютерным зрением. 
+            Перед тобой реальное фото предмета, который пользователь хочет продать.
+            {user_text_hint}
             
-            ВНИМАТЕЛЬНО ИЗУЧИ ИЗОБРАЖЕНИЕ И ОПРЕДЕЛИ ГЛАЗАМИ, ЧТО НА НЕМ НАХОДИТСЯ.
+            ВНИМАТЕЛЬНО ИЗУЧИ ИЗОБРАЖЕНИЕ:
+            1. Определи, ЧТО ИМЕННО находится на фотографии (бренд, модель, цвет, материал, количество, сфера применения).
+            2. Оцени внешний вид товара, его сохранность, упаковку и видимые дефекты. Определи это исключительно глазами по картинке!
             
-            Выдай ответ строго на русском языке в следующем формате:
+            Выдай подробный ответ строго на русском языке в следующем формате:
             
             📊 БЛОК 1: ЧТО УВИДЕЛ ИИ И РЕАЛЬНАЯ СТОИМОСТЬ
-            - **Результат сканирования фото:** Подробно опиши, какой именно предмет ты видишь на картинке, его цвет, бренд (если видно) и форму.
+            - **Результат сканирования фото:** Подробно опиши, какой именно предмет ты видишь на картинке, его цвет, комплектацию, примерное количество и форму.
             - **Вторичный рынок РФ:** Реальная средняя б/у цена этого конкретного товара на Авито прямо сейчас.
-            - **Рекомендуемая вилка цен:** Минимальная цена (чтобы забрали сегодня) и максимальная цена.
-            - **Совет оценщика:** Что сделать с вещью на фото, чтобы продать её дороже.
+            - **Рекомендуемая вилка цен:** Минимальная цена (чтобы забрали сегодня) и максимальная цена (если готовы подождать).
+            - **Совет оценщика:** Что сделать с вещью на фото, чтобы продать её дороже (протереть, найти коробку, указать точные размеры).
             
-            📝 БЛОК 2: ГОТОВОЕ ОБЪЯВЛЕНИЕ ДЛЯ АВИТО
+            📝 БЛОК 2: ГОТОВОЕ ОБЪЯВЛЕНИЕ ДЛЯ БЫСТРОЙ ПРОДАЖИ
             - **Заголовок:** Идеальный поисковый заголовок для Авито.
-            - **Описание:** Живой продающий текст, описывающий ИМЕННО ТОТ ПРЕДМЕТ, что на фото.
+            - **Описание:** Живой продающий текст, описывающий ИМЕННО ТОТ ПРЕДМЕТ, что на фото. Укажи параметры, которые ты заметил на картинке, причину продажи, блок доставки и призыв написать в ЛС.
             """
             
             try:
-                with st.spinner("👁️ Автономный ИИ детально изучает ваше фото..."):
-                    # Делаем прямой запрос в зрячую модель через официальную библиотеку
-                    response = client.chat_completion(
-                        model="Qwen/Qwen2.5-VL-7B-Instruct",
+                with st.spinner("👁️ Зрячий ИИ ВсеGPT детально изучает ваше фото..."):
+                    # Используем бесплатную и стабильную модель Llama 3.2 Vision
+                    response = ai_client.chat.completions.create(
+                        model="meta-llama/llama-3.2-11b-vision-instruct:free",
                         messages=[
                             {
                                 "role": "user",
@@ -96,13 +108,22 @@ with tab1:
                                     }
                                 ]
                             }
-                        ],
-                        max_tokens=800
+                        ]
                     )
                 
-                ai_text = response.choices[0].message.content
-                st.success("🤖 Визуальный анализ фотографии успешно завершен!")
-                st.markdown(ai_text)
+                # Всеядная расшифровка
+                if isinstance(response, str):
+                    ai_text = response
+                elif hasattr(response, 'choices') and len(response.choices) > 0:
+                    ai_text = response.choices.message.content
+                else:
+                    ai_text = str(response)
+
+                if "<!DOCTYPE html>" in ai_text or "<html" in ai_text:
+                    st.error("⚠️ Сервер вернул техническую ошибку. Проверьте ваш API-ключ во ВсеGPT!")
+                else:
+                    st.success("🤖 Визуальный анализ фотографии успешно завершен!")
+                    st.markdown(ai_text)
                 
             except Exception as e:
                 st.error(f"Не удалось выполнить оценку. Ошибка сервера: {e}")
@@ -113,14 +134,13 @@ with tab2:
     if user_input := st.chat_input("Напишите ваш вопрос..."):
         with st.chat_message("user"):
             st.write(user_input)
+        
         try:
             with st.spinner("ИИ пишет ответ..."):
-                response = client.chat_completion(
-                    model="Qwen/Qwen2.5-VL-7B-Instruct",
-                    messages=[{"role": "user", "content": user_input}],
-                    max_tokens=300
+                response = ai_client.chat.completions.create(
+                    model="openai/gpt-4o-mini",
+                    messages=[{"role": "user", "content": user_input}]
                 )
-            with st.chat_message("assistant"):
-                st.markdown(response.choices[0].message.content)
+            st.markdown(response.choices.message.content)
         except Exception as e:
             st.error(f"Ошибка чата: {e}")
