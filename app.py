@@ -1,9 +1,12 @@
 import streamlit as st
-from g4f.client import Client
+from openai import OpenAI
 from PIL import Image
 
-# Инициализируем бесплатного автономного клиента без ключей
-ai_client = Client()
+# Инициализируем клиента ВсеGPT, используя ваш секретный ключ
+ai_client = OpenAI(
+    base_url="https://vsegpt.ru",
+    api_key=st.secrets["VSEGPT_API_KEY"]
+)
 
 # Настройка интерфейса сайта в браузере
 st.set_page_config(page_title="Авито Расхламление с ИИ", page_icon="✨", layout="centered")
@@ -24,7 +27,7 @@ st.info("💡 **Как это работает?** 1. Сделай фото ➡�
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 🆓 Автономный Безлимит")
+    st.write("**Статус тарифа:** 🆓 Стартовый баланс ВсеGPT")
     st.markdown("---")
     st.subheader("🤖 Наш Telegram-бот")
     st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
@@ -85,22 +88,23 @@ with tab1:
             - **Текст объявления:** Напиши структурированный, честный и продающий текст. Укажи параметры, причину продажи ("освобождаю место"), блок доставки и призыв написать в личку.
             """
             try:
-                with st.spinner("🕵️‍♂️ ИИ подбирает лучшую нейросеть для анализа..."):
-                    # g4f автоматически подберет рабочий сервер и модель (например, GPT-4o или GPT-3.5)
+                with st.spinner("🕵️‍♂️ ИИ анализирует рынок вторички РФ..."):
+                    # Используем быструю, качественную и стабильную модель gpt-4o-mini
                     response = ai_client.chat.completions.create(
-                        model="gpt-4o",
+                        model="openai/gpt-4o-mini",
                         messages=[
                             {"role": "user", "content": system_instruction}
                         ]
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
-                st.markdown(response.choices[0].message.content)
+                
+                st.markdown(response.choices.message.content)
                 
                 st.markdown("---")
                 st.info("💡 **Понравился результат?** Забирай безлимитный доступ к оценщику в нашем Telegram-боте!")
                 st.link_button("💬 Перейти в Telegram-бот", "https://t.me")
             except Exception as e:
-                st.error(f"Не удалось выполнить оценку. Ошибка сети: {e}")
+                st.error(f"Не удалось выполнить оценку. Ошибка сервера: {e}")
 
 # --- ВКЛАДКА 2: ТЕКСТОВЫЙ ЧАТ С ИИ ---
 with tab2:
@@ -121,12 +125,12 @@ with tab2:
         try:
             with st.spinner("ИИ пишет ответ..."):
                 response = ai_client.chat.completions.create(
-                    model="gpt-4o",
+                    model="openai/gpt-4o-mini",
                     messages=formatted_messages
                 )
             
             with st.chat_message("assistant"):
-                st.write(response.choices[0].message.content)
-            st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message.content})
+                st.write(response.choices.message.content)
+            st.session_state.messages.append({"role": "assistant", "content": response.choices.message.content})
         except Exception as e:
             st.error(f"Ошибка ИИ в чате: {e}")
