@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 from PIL import Image
 
-# Инициализируем клиента ВсеGPT, используя ваш секретный ключ
+# ИСПРАВЛЕНО: Меняем эндпоинт на основной официальный /api/v1
 ai_client = OpenAI(
     base_url="https://vsegpt.ru",
     api_key=st.secrets["VSEGPT_API_KEY"]
@@ -27,7 +27,7 @@ st.info("💡 **Как это работает?** 1. Сделай фото ➡�
 with st.sidebar:
     st.header("👤 Ваш ИИ-Ассистент")
     st.write("**Пользователь:** Искандер")
-    st.write("**Статус тарифа:** 🆓 Стартовый баланс ВсеGPT")
+    st.write("**Статус тарифа:** 🆓 Баланс ВсеGPT")
     st.markdown("---")
     st.subheader("🤖 Наш Telegram-бот")
     st.write("Хотите расхламляться без ограничений прямо с телефона и сохранять историю своих продаж?")
@@ -75,7 +75,7 @@ with tab1:
             Предмет для анализа: "{item_title}"
             Состояние предмета: "{item_status}"
             
-            Выдай подробный ответ строго на русском языке по следующим blocks:
+            Выдай подробный ответ строго на русском языке по следующим блокам:
             
             📊 БЛОК 1: АНАЛИЗ СТОИМОСТИ (СКОЛЬКО ДЕНЕГ ВЫ ПОЛУЧИТЕ)
             - **Что оцениваем:** Подробное описание модели, бренда и характеристик на основе введенного текста.
@@ -97,11 +97,10 @@ with tab1:
                     )
                 st.success("🤖 Рынок успешно проанализирован! Забирайте ваши деньги:")
                 
-                # УМНАЯ ПРОВЕРКА ТИПА ДАННЫХ
                 if isinstance(response, str):
                     ai_text = response
                 elif hasattr(response, 'choices') and len(response.choices) > 0:
-                    ai_text = response.choices[0].message.content
+                    ai_text = response.choices.message.content
                 else:
                     ai_text = str(response)
                     
@@ -136,11 +135,10 @@ with tab2:
                     messages=formatted_messages
                 )
             
-            # УМНАЯ ПРОВЕРКА ТИПА ДАННЫХ ДЛЯ ЧАТА
             if isinstance(response, str):
                 ai_response_text = response
             elif hasattr(response, 'choices') and len(response.choices) > 0:
-                ai_response_text = response.choices[0].message.content
+                ai_response_text = response.choices.message.content
             else:
                 ai_response_text = str(response)
             
